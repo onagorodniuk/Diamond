@@ -106,9 +106,9 @@ class MemoryCollector(diamond.collector.Collector):
             phymem_usage = psutil.phymem_usage()
             virtmem_usage = psutil.virtmem_usage()
             units = 'B'
-            physmem_free_percent=int(phymem_usage.percent)
+            physmem_free_percent=100 - int(phymem_usage.percent)
             self.publish('PhysMemFreePercent', physmem_free_percent)
-            virtmem_free_percent=int(virtmem_usage.percent)
+            virtmem_free_percent=100 - int(virtmem_usage.percent)
             self.publish('VirtMemFreePercent', virtmem_free_percent)
 
 
