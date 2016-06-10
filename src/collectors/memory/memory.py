@@ -19,14 +19,12 @@ import os
 
 try:
     import psutil
-    psutil  # workaround for pyflakes issue #13
 except ImportError:
     psutil = None
 
 _KEY_MAPPING = [
     'MemTotal',
     'MemFree',
-    'MemAvailable',  # needs kernel 3.14
     'Buffers',
     'Cached',
     'Active',
@@ -60,12 +58,10 @@ class MemoryCollector(diamond.collector.Collector):
         """
         config = super(MemoryCollector, self).get_default_config()
         config.update({
-            'path': 'memory',
-            'method': 'Threaded',
-            'force_psutil': 'False'
+            'path':     'memory',
             # Collect all the nodes or just a few standard ones?
             # Uncomment to enable
-            # 'detailed': 'True'
+            #'detailed': 'True'
         })
         return config
 
@@ -85,8 +81,8 @@ class MemoryCollector(diamond.collector.Collector):
                     name = name.rstrip(':')
                     value = int(value)
 
-                    if ((name not in _KEY_MAPPING and
-                         'detailed' not in self.config)):
+                    if (name not in _KEY_MAPPING
+                            and 'detailed' not in self.config):
                         continue
 
                     for unit in self.config['byte_unit']:
@@ -107,24 +103,19 @@ class MemoryCollector(diamond.collector.Collector):
                 self.log.error('No memory metrics retrieved')
                 return None
 
-            # psutil.phymem_usage() and psutil.virtmem_usage() are deprecated.
-            if hasattr(psutil, "phymem_usage"):
-                phymem_usage = psutil.phymem_usage()
-                virtmem_usage = psutil.virtmem_usage()
-            else:
-                phymem_usage = psutil.virtual_memory()
-                virtmem_usage = psutil.swap_memory()
-
+            phymem_usage = psutil.phymem_usage()
+            virtmem_usage = psutil.virtmem_usage()
             units = 'B'
+            physmem_free_percent=int(phymem_usage.percent)
+            self.publish('PhysMemFreePercent', physmem_free_percent)
+            virtmem_free_percent=int(virtmem_usage.percent)
+            self.publish('VirtMemFreePercent', virtmem_free_percent)
+
 
             for unit in self.config['byte_unit']:
                 value = diamond.convertor.binary.convert(
                     value=phymem_usage.total, oldUnit=units, newUnit=unit)
                 self.publish('MemTotal', value, metric_type='GAUGE')
-
-                value = diamond.convertor.binary.convert(
-                    value=phymem_usage.available, oldUnit=units, newUnit=unit)
-                self.publish('MemAvailable', value, metric_type='GAUGE')
 
                 value = diamond.convertor.binary.convert(
                     value=phymem_usage.free, oldUnit=units, newUnit=unit)
@@ -138,7 +129,10 @@ class MemoryCollector(diamond.collector.Collector):
                     value=virtmem_usage.free, oldUnit=units, newUnit=unit)
                 self.publish('SwapFree', value, metric_type='GAUGE')
 
+
                 # TODO: We only support one unit node here. Fix it!
                 break
 
             return True
+
+        return None
